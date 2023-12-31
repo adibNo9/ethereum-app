@@ -1,12 +1,11 @@
 import { useState } from "react";
 
+import { parseEther } from "viem";
 import {
   useAccount,
   useConnect,
-  useContractWrite,
   useDisconnect,
   usePrepareContractWrite,
-  useWaitForTransaction,
 } from "wagmi";
 
 import { connector } from "./";
@@ -30,6 +29,8 @@ function App() {
     config,
     error: prepareError,
     isError: isPrepareError,
+    isSuccess,
+    data,
   } = usePrepareContractWrite({
     address: account.address,
     abi: [
@@ -38,24 +39,15 @@ function App() {
         type: "function",
         stateMutability: "nonpayable",
         inputs: [{ internalType: "uint32", name: "tokenId", type: "uint32" }],
-        outputs: [],
+        outputs: [{ name: "success", type: "bool" }],
       },
     ],
     functionName: "mint",
-    args: [parseInt(debouncedTokenId)],
+    args: [parseEther(debouncedTokenId)],
     enabled: Boolean(debouncedTokenId),
   });
-  const {
-    data,
-    error: errorContract,
-    isError,
-    write,
-  } = useContractWrite(config);
 
-  const { isLoading: isLoadingTransaction, isSuccess } = useWaitForTransaction({
-    hash: data?.hash,
-  });
-  console.log(data, "test", errorContract, isLoadingTransaction);
+  console.log(data, isSuccess);
 
   return (
     <>
@@ -66,7 +58,6 @@ function App() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              write?.();
             }}
           >
             <label for="tokenId">Token ID</label>
@@ -76,7 +67,7 @@ function App() {
               placeholder="420"
               value={tokenId}
             />
-            <button disabled={!write || isLoading}>
+            <button disabled={isLoading}>
               {isLoading ? "Minting..." : "Mint"}
             </button>
             {isSuccess && (
@@ -89,7 +80,7 @@ function App() {
                 </div>
               </div>
             )}
-            {(isPrepareError || isError) && (
+            {isPrepareError && (
               <div>Error: {(prepareError || error)?.message}</div>
             )}
           </form>
